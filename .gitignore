@@ -1,0 +1,27 @@
+# --- secrets: never commit the live cloud config ---
+# Real endpoint + token live here locally; on GitHub they are injected at deploy
+# time from repo Secrets (see .github/workflows/deploy.yml). Use
+# muse-recorder/js/config.example.js as the template.
+muse-recorder/js/config.js
+
+# --- generated test artifacts (recreated by the validation gate) ---
+muse-recorder/test/session_synth.xdf
+muse-recorder/test/uploaded_copy.xdf
+muse-recorder/test/expected.json
+
+# --- python / tooling ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- node (none committed, but just in case) ---
+node_modules/
+
+# --- recorded data: don't commit subject recordings if any land here ---
+*.xdf
+!muse-recorder/test/fixtures/*.xdf
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db

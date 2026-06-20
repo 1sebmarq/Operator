@@ -1,0 +1,78 @@
+name: Deploy Muse Recorder to GitHub Pages
+
+# Deploys on every push to main. The app lives in muse-recorder/ and is published
+# as the site root, so the URL is https://<you>.github.io/<repo>/ .
+#
+# Two build-time steps replace the old "re-upload + bump cache" chore:
+#   1. config.js is written from repo Secrets (CLOUD_ENDPOINT, CLOUD_TOKEN) so no
+#      secret is committed to the repo. (It is still publicly readable on the
+#      served site — that is unavoidable for any static site.)
+#   2. The service-worker cache name is stamped with the commit SHA, so every
+#      deploy busts caches automatically.
+#
+# One-time setup in the repo:
+#   Settings > Pages > Build and deployment > Source: GitHub Actions
+#   Settings > Secrets and variables > Actions > New repository secret:
+#     CLOUD_ENDPOINT = your Apps Script /exec URL
+#     CLOUD_TOKEN    = the same value as SHARED_TOKEN in cloud/Code.gs
+# (If you omit the secrets, the app still deploys with cloud upload disabled.)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write runtime config from secrets
+        env:
+          CLOUD_ENDPOINT: ${{ secrets.CLOUD_ENDPOINT }}
+          CLOUD_TOKEN: ${{ secrets.CLOUD_TOKEN }}
+        run: |
+          mkdir -p muse-recorder/js
+          cat > muse-recorder/js/config.js <<EOF
+          // GENERATED AT DEPLOY TIME — do not edit. Values come from repo Secrets.
+          export const CLOUD = {
+            endpoint: '${CLOUD_ENDPOINT}',
+            token: '${CLOUD_TOKEN}',
+            autoUpload: true,
+          };
+          export function cloudEnabled() {
+            return typeof CLOUD.endpoint === 'string' && CLOUD.endpoint.startsWith('http');
+          }
+          EOF
+          echo "wrote config.js (endpoint set: ${CLOUD_ENDPOINT:+yes})"
+
+      - name: Stamp service-worker cache version with commit SHA
+        run: |
+          sed -i "s|muse-recorder-v[A-Za-z0-9._-]*|muse-recorder-${GITHUB_SHA}|" muse-recorder/sw.js
+          grep "const CACHE" muse-recorder/sw.js
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact (muse-recorder/)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: muse-recorder
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
