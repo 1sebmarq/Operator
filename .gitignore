@@ -1,8 +1,7 @@
-# --- secrets: never commit the live cloud config ---
-# Real endpoint + token live here locally; on GitHub they are injected at deploy
-# time from repo Secrets (see .github/workflows/deploy.yml). Use
-# muse-recorder/js/config.example.js as the template.
-muse-recorder/js/config.js
+# NOTE: muse-recorder/js/config.js IS committed on purpose. The cloud token is
+# already public on the served site, so keeping it out of git buys nothing while
+# adding a fragile build step. It is committed so the app always has its config.
+# To change the token, edit config.js AND SHARED_TOKEN in cloud/Code.gs, then push.
 
 # --- generated test artifacts (recreated by the validation gate) ---
 muse-recorder/test/session_synth.xdf

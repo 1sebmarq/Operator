@@ -41,24 +41,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Write runtime config from secrets
-        env:
-          CLOUD_ENDPOINT: ${{ secrets.CLOUD_ENDPOINT }}
-          CLOUD_TOKEN: ${{ secrets.CLOUD_TOKEN }}
-        run: |
-          mkdir -p muse-recorder/js
-          cat > muse-recorder/js/config.js <<EOF
-          // GENERATED AT DEPLOY TIME — do not edit. Values come from repo Secrets.
-          export const CLOUD = {
-            endpoint: '${CLOUD_ENDPOINT}',
-            token: '${CLOUD_TOKEN}',
-            autoUpload: true,
-          };
-          export function cloudEnabled() {
-            return typeof CLOUD.endpoint === 'string' && CLOUD.endpoint.startsWith('http');
-          }
-          EOF
-          echo "wrote config.js (endpoint set: ${CLOUD_ENDPOINT:+yes})"
+      # config.js is committed in the repo (the token is public on the served site
+      # anyway), so there is no secret-injection step. Just publish the files.
 
       - name: Stamp service-worker cache version with commit SHA
         run: |

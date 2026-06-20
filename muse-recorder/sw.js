@@ -1,7 +1,7 @@
 // sw.js — offline app-shell cache. Recording data lives in IndexedDB, NOT here.
 // We cache static assets so the PWA opens without a network. Bump CACHE on
 // release to invalidate. Data fetches (there are none) are never cached.
-const CACHE = 'muse-recorder-v2';
+const CACHE = 'muse-recorder-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const ASSETS = [
   './js/storage.js',
   './js/streams.js',
   './js/clock.js',
+  './js/config.js',
   './js/uploader.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
