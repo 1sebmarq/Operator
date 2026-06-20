@@ -145,6 +145,7 @@ h2 { font-size: 20px; margin: 0; }
 .session-list .acts { display: flex; gap: 8px; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg-elev2); color: var(--muted); margin-left: 6px; }
 .badge.flag { background: #2a210c; color: var(--warn); }
+.badge.up { background: #0e2a20; color: var(--good); }
 
 /* bottom sheet */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: flex; align-items: flex-end; }

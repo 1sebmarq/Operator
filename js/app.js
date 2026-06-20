@@ -2,6 +2,21 @@
 import { MuseClient } from './muse.js';
 import { Recorder } from './recorder.js';
 import { ACTIVITY_LABELS, ASSESSMENT_LABELS } from './streams.js';
+import { uploadBlob } from './uploader.js';
+
+// config.js is OPTIONAL and gitignored (holds the cloud endpoint + token). If it
+// is absent — e.g. a fresh clone with no secrets — cloud upload simply disables
+// itself and everything else works. On the deployed site, GitHub Actions writes
+// config.js from repo Secrets at build time.
+let CLOUD = { endpoint: '', token: '', autoUpload: true };
+let cloudEnabled = () => false;
+try {
+  const m = await import('./config.js');
+  if (m && m.CLOUD) CLOUD = m.CLOUD;
+  if (m && m.cloudEnabled) cloudEnabled = m.cloudEnabled;
+} catch (_) {
+  /* no config.js → cloud disabled */
+}
 
 const $ = (id) => document.getElementById(id);
 const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -279,13 +294,18 @@ $('btnStop').addEventListener('click', async () => {
   if (!state.recorder) return;
   await endOfSessionAssessment();
   $('btnStop').disabled = true;
-  await state.recorder.stop();
+  const session = await state.recorder.stop();
   $('btnStop').disabled = false;
   stopTimer();
   toast('Session saved');
   backTarget = 'home';
   renderSessions();
   show('sessions');
+  // auto-upload in the background; the session list refreshes when done
+  if (session && CLOUD.autoUpload && cloudEnabled()) {
+    toast('Uploading to Drive…');
+    uploadAndMark(state.recorder.store, session).finally(() => renderSessions());
+  }
 });
 
 $('btnDiscard').addEventListener('click', async () => {
@@ -352,8 +372,12 @@ async function renderSessions() {
     const li = document.createElement('li');
     const dur = s.endedAt ? Math.round((s.endedAt - s.createdAt) / 1000) : 0;
     const counts = s.counts || {};
+    const upBadge = !cloudEnabled() ? ''
+      : s.uploaded ? '<span class="badge up">☁ uploaded</span>'
+      : s.uploadError ? '<span class="badge flag">☁ upload failed</span>'
+      : '<span class="badge">☁ not uploaded</span>';
     li.innerHTML = `
-      <div class="fn">${s.filename}${s.flagged ? '<span class="badge flag">flagged</span>' : ''}${s.exported ? '' : '<span class="badge">no file</span>'}</div>
+      <div class="fn">${s.filename}${s.flagged ? '<span class="badge flag">flagged</span>' : ''}${s.exported ? '' : '<span class="badge">no file</span>'}${upBadge}</div>
       <div class="meta2">${new Date(s.createdAt).toLocaleString()} · ${fmtTime(dur)} · EEG ${counts.EEG || 0} · markers ${s.markerCount || 0}</div>
       <div class="acts"></div>`;
     const acts = li.querySelector('.acts');
@@ -361,6 +385,15 @@ async function renderSessions() {
     dl.addEventListener('click', () => downloadSession(store, s));
     const sh = document.createElement('button'); sh.className = 'btn small'; sh.textContent = 'Share';
     sh.addEventListener('click', () => shareSession(store, s));
+    if (cloudEnabled() && !s.uploaded) {
+      const up = document.createElement('button'); up.className = 'btn small'; up.textContent = 'Upload';
+      up.addEventListener('click', async () => {
+        up.disabled = true; up.textContent = 'Uploading…';
+        await uploadAndMark(store, s);
+        renderSessions();
+      });
+      acts.append(up);
+    }
     const del = document.createElement('button'); del.className = 'btn small ghost'; del.textContent = 'Delete';
     del.addEventListener('click', async () => { if (confirm('Delete this session?')) { await store.deleteSession(s.id); renderSessions(); } });
     acts.append(dl, sh, del);
@@ -374,6 +407,32 @@ async function getBlob(store, s) {
   // fallback: rebuild from chunks
   const r = state.recorder || (await Recorder.create(state.client));
   return r.export(s.id);
+}
+
+async function uploadAndMark(store, s, { silent = false } = {}) {
+  if (!cloudEnabled() || s.uploaded) return;
+  try {
+    const blob = await getBlob(store, s);
+    const meta = {
+      subjectId: s.meta && s.meta.subjectId,
+      sessionType: s.meta && s.meta.sessionType,
+      datetime: s.datetime,
+      durationSec: s.endedAt ? Math.round((s.endedAt - s.createdAt) / 1000) : null,
+      counts: s.counts || {},
+      dropped: s.dropped || {},
+      markerCount: s.markerCount || 0,
+      flagged: !!s.flagged,
+      device: { serial: s.meta && s.meta.serial, firmware: s.meta && s.meta.firmware, type: s.meta && s.meta.deviceType },
+    };
+    const r = await uploadBlob(CLOUD.endpoint, CLOUD.token, s.filename, blob, meta);
+    await store.updateSession(s.id, { uploaded: true, uploadError: null, uploadedAt: Date.now(), uploadStatus: r.status });
+    s.uploaded = true;
+    if (!silent) toast(r.status === 'exists' ? 'Already in Drive' : 'Uploaded to Drive');
+  } catch (e) {
+    await store.updateSession(s.id, { uploaded: false, uploadError: String(e.message || e) });
+    s.uploadError = String(e.message || e);
+    if (!silent) toast('Upload failed — kept on device, retry anytime');
+  }
 }
 
 async function downloadSession(store, s) {

@@ -1,12 +1,12 @@
-# NOTE: muse-recorder/js/config.js IS committed on purpose. The cloud token is
+# NOTE: js/config.js IS committed on purpose. The cloud token is
 # already public on the served site, so keeping it out of git buys nothing while
 # adding a fragile build step. It is committed so the app always has its config.
 # To change the token, edit config.js AND SHARED_TOKEN in cloud/Code.gs, then push.
 
 # --- generated test artifacts (recreated by the validation gate) ---
-muse-recorder/test/session_synth.xdf
-muse-recorder/test/uploaded_copy.xdf
-muse-recorder/test/expected.json
+test/session_synth.xdf
+test/uploaded_copy.xdf
+test/expected.json
 
 # --- python / tooling ---
 __pycache__/
@@ -17,9 +17,12 @@ venv/
 # --- node (none committed, but just in case) ---
 node_modules/
 
+# --- Pages build output (only created when the deploy workflow runs) ---
+_site/
+
 # --- recorded data: don't commit subject recordings if any land here ---
 *.xdf
-!muse-recorder/test/fixtures/*.xdf
+!test/fixtures/*.xdf
 
 # --- OS noise ---
 .DS_Store

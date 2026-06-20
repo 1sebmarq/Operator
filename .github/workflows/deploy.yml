@@ -1,21 +1,15 @@
 name: Deploy Muse Recorder to GitHub Pages
 
-# Deploys on every push to main. The app lives in muse-recorder/ and is published
-# as the site root, so the URL is https://<you>.github.io/<repo>/ .
+# Deploys on every push to main. The app now lives at the repo ROOT and is
+# published to GitHub Pages, so the URL is https://<you>.github.io/<repo>/ .
 #
-# Two build-time steps replace the old "re-upload + bump cache" chore:
-#   1. config.js is written from repo Secrets (CLOUD_ENDPOINT, CLOUD_TOKEN) so no
-#      secret is committed to the repo. (It is still publicly readable on the
-#      served site — that is unavoidable for any static site.)
-#   2. The service-worker cache name is stamped with the commit SHA, so every
-#      deploy busts caches automatically.
+# Build-time step: the service-worker cache name is stamped with the commit SHA
+# so every deploy busts caches automatically.
 #
 # One-time setup in the repo:
 #   Settings > Pages > Build and deployment > Source: GitHub Actions
-#   Settings > Secrets and variables > Actions > New repository secret:
-#     CLOUD_ENDPOINT = your Apps Script /exec URL
-#     CLOUD_TOKEN    = the same value as SHARED_TOKEN in cloud/Code.gs
-# (If you omit the secrets, the app still deploys with cloud upload disabled.)
+# config.js is committed in the repo (the token is public on the served site
+# anyway), so there is no secret-injection step.
 
 on:
   push:
@@ -41,21 +35,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # config.js is committed in the repo (the token is public on the served site
-      # anyway), so there is no secret-injection step. Just publish the files.
-
       - name: Stamp service-worker cache version with commit SHA
         run: |
-          sed -i "s|muse-recorder-v[A-Za-z0-9._-]*|muse-recorder-${GITHUB_SHA}|" muse-recorder/sw.js
-          grep "const CACHE" muse-recorder/sw.js
+          sed -i "s|muse-recorder-v[A-Za-z0-9._-]*|muse-recorder-${GITHUB_SHA}|" sw.js
+          grep "const CACHE" sw.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload site artifact (muse-recorder/)
+      # Publish only the app shell, not cloud/ (Apps Script) or test/ tooling.
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js .nojekyll css js icons _site/
+      - name: Upload site artifact (_site)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: muse-recorder
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
