@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>EEG Viewer — Muse</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/viewer.css" />
+</head>
+<body class="viewer">
+  <header class="topbar">
+    <div>
+      <h1>EEG Viewer</h1>
+      <div class="sub" id="fileSub">Load a .xdf recording to begin</div>
+    </div>
+    <a class="home" href="index.html">‹ Recorder</a>
+  </header>
+
+  <div class="wrap">
+    <!-- LOAD -->
+    <section class="card" id="loadCard">
+      <div class="drop" id="drop">
+        <p><strong>Drop a .xdf file here</strong> or click to choose</p>
+        <p class="small muted">Files are parsed entirely in your browser — nothing is uploaded.</p>
+        <input type="file" id="fileInput" accept=".xdf" hidden />
+      </div>
+      <p class="small err hidden" id="loadErr"></p>
+    </section>
+
+    <!-- SESSION INFO -->
+    <section class="card hidden" id="metaCard">
+      <h2>Session</h2>
+      <div class="sessionmeta" id="sessionMeta"></div>
+    </section>
+
+    <!-- FILTERS / PREPROCESSING -->
+    <section class="card hidden" id="filterCard">
+      <h2>Preprocessing filters</h2>
+      <div class="controls">
+        <div class="field">
+          <label class="toggle"><input type="checkbox" id="hpOn" checked /> High-pass</label>
+          <input type="number" id="hpFreq" value="1" min="0.1" max="100" step="0.1" /> <span class="small muted">Hz</span>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" id="lpOn" checked /> Low-pass</label>
+          <input type="number" id="lpFreq" value="40" min="1" max="128" step="1" /> <span class="small muted">Hz</span>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" id="notchOn" checked /> Notch</label>
+          <select id="notchFreq">
+            <option value="60" selected>60 Hz (US)</option>
+            <option value="50">50 Hz (EU)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Detrend</label>
+          <label class="toggle"><input type="checkbox" id="detrendOn" checked /> remove mean</label>
+        </div>
+        <button class="btn" id="resetFilters">Reset</button>
+      </div>
+      <p class="small muted" id="fsNote" style="margin:10px 0 0"></p>
+    </section>
+
+    <!-- CHANNELS -->
+    <section class="card hidden" id="chanCard">
+      <h2>Channels</h2>
+      <div class="chips" id="chanChips"></div>
+    </section>
+
+    <!-- TIME-SERIES SCROLL -->
+    <section class="card hidden" id="scrollCard">
+      <div class="plot-head">
+        <h2>Time series</h2>
+        <div class="controls" style="gap:10px 16px">
+          <div class="field">
+            <label>Window</label>
+            <select id="winSec">
+              <option value="2">2 s</option>
+              <option value="5">5 s</option>
+              <option value="10" selected>10 s</option>
+              <option value="20">20 s</option>
+              <option value="30">30 s</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Scale (µV/div)</label>
+            <select id="ampScale">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+              <option value="500">500</option>
+            </select>
+          </div>
+          <label class="toggle"><input type="checkbox" id="showMarkers" checked /> Markers</label>
+          <label class="toggle"><input type="checkbox" id="showRaw" /> Overlay raw</label>
+        </div>
+      </div>
+      <canvas id="scrollCanvas" height="420"></canvas>
+      <div class="navrow">
+        <button class="btn icon" id="navPrev">‹</button>
+        <input type="range" id="navSlider" min="0" max="100" value="0" step="0.1" />
+        <button class="btn icon" id="navNext">›</button>
+        <span class="small muted" id="navLabel" style="min-width:130px;text-align:right"></span>
+      </div>
+    </section>
+
+    <!-- PSD -->
+    <section class="card hidden" id="psdCard">
+      <div class="plot-head">
+        <h2>Power spectral density (Welch)</h2>
+        <div class="controls" style="gap:10px 16px">
+          <div class="field">
+            <label>Max freq</label>
+            <select id="psdMax">
+              <option value="40">40 Hz</option>
+              <option value="50">50 Hz</option>
+              <option value="60" selected>60 Hz</option>
+              <option value="128">Nyquist</option>
+            </select>
+          </div>
+          <label class="toggle"><input type="checkbox" id="psdLog" checked /> Log power</label>
+          <label class="toggle"><input type="checkbox" id="psdWholeRange" /> Full recording</label>
+        </div>
+      </div>
+      <canvas id="psdCanvas" height="320"></canvas>
+      <div class="legend" id="psdLegend"></div>
+      <p class="small muted">Shaded bands: δ 0.5–4 · θ 4–8 · α 8–13 · β 13–30 · γ 30–45 Hz. Computed over the current window unless "Full recording" is checked.</p>
+    </section>
+
+    <!-- BAND POWER OVER TIME -->
+    <section class="card hidden" id="bandCard">
+      <div class="plot-head">
+        <h2>Band power over time</h2>
+        <div class="controls" style="gap:10px 16px">
+          <div class="field">
+            <label>Channel</label>
+            <select id="bandChan"></select>
+          </div>
+          <div class="field">
+            <label>Window</label>
+            <select id="bandWin">
+              <option value="1">1 s</option>
+              <option value="2" selected>2 s</option>
+              <option value="4">4 s</option>
+            </select>
+          </div>
+          <label class="toggle"><input type="checkbox" id="bandRel" checked /> Relative</label>
+        </div>
+      </div>
+      <canvas id="bandCanvas" height="300"></canvas>
+      <div class="legend" id="bandLegend"></div>
+    </section>
+  </div>
+
+  <script type="module" src="js/viewer.js"></script>
+</body>
+</html>

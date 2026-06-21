@@ -1,0 +1,81 @@
+/* viewer.css — EEG viewer page. Reuses the theme variables from styles.css. */
+
+body.viewer {
+  -webkit-user-select: text; user-select: text;
+  min-height: 100%;
+}
+.viewer .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+.viewer header.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(var(--safe-t) + 12px) 16px 12px;
+  background: linear-gradient(var(--bg), rgba(11,14,20,.9));
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bg-elev2);
+}
+.viewer header.topbar h1 { font-size: 18px; margin: 0; }
+.viewer header.topbar .sub { color: var(--muted); font-size: 12px; }
+.viewer a.home { color: var(--accent); text-decoration: none; font-size: 14px; }
+
+.card {
+  background: var(--bg-elev); border: 1px solid var(--bg-elev2);
+  border-radius: var(--radius); padding: 14px; margin: 14px 0;
+}
+.card h2 { font-size: 14px; margin: 0 0 10px; color: var(--fg); letter-spacing: .02em; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+/* drop zone */
+.drop {
+  border: 2px dashed var(--bg-elev2); border-radius: var(--radius);
+  padding: 40px 20px; text-align: center; color: var(--muted);
+  transition: border-color .15s, background .15s; cursor: pointer;
+}
+.drop.drag { border-color: var(--accent); background: rgba(91,140,255,.08); color: var(--fg); }
+.drop strong { color: var(--fg); }
+
+/* controls */
+.controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.field input[type=number], .field select {
+  background: var(--bg-elev2); color: var(--fg); border: 1px solid #2a3550;
+  border-radius: 10px; padding: 8px 10px; min-width: 90px; font-size: 14px;
+}
+.field input:disabled { opacity: .4; }
+.inline { display: flex; align-items: center; gap: 8px; }
+
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: var(--bg-elev2); border: 1px solid #2a3550; border-radius: 999px;
+  padding: 6px 12px; font-size: 13px; user-select: none;
+}
+.chip .sw { width: 10px; height: 10px; border-radius: 2px; }
+.chip.off { opacity: .4; }
+
+.btn {
+  background: var(--bg-elev2); color: var(--fg); border: 1px solid #2a3550;
+  border-radius: 12px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+}
+.btn.primary { background: var(--accent-2); border-color: var(--accent); color: #fff; }
+.btn:active { transform: translateY(1px); }
+.btn.icon { padding: 8px 12px; font-weight: 700; }
+
+canvas { width: 100%; display: block; border-radius: 10px; background: #0a0d15; }
+.plot-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.legend .item { display: inline-flex; align-items: center; gap: 5px; }
+.legend .sw { width: 12px; height: 3px; border-radius: 2px; }
+
+.navrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.navrow input[type=range] { flex: 1; accent-color: var(--accent); }
+
+.hidden { display: none !important; }
+.sessionmeta { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 8px 16px; font-size: 13px; }
+.sessionmeta div span { color: var(--muted); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.err { color: var(--bad); }
