@@ -248,10 +248,10 @@ function renderScroll() {
 }
 
 function drawTrace(ctx, data, i0, i1, fs, xOf, mid, pxPerUv, plotW, padL, color) {
-  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath();
+  ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
   const nPts = i1 - i0;
-  if (nPts <= plotW * 1.5) {
-    // direct
+  if (nPts <= plotW * 2) {
+    // direct continuous polyline through every sample
     let first = true;
     for (let i = i0; i <= i1; i++) {
       const x = xOf(i / fs);
@@ -259,8 +259,10 @@ function drawTrace(ctx, data, i0, i1, fs, xOf, mid, pxPerUv, plotW, padL, color)
       if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
     }
   } else {
-    // min/max decimation per pixel column
+    // min/max decimation, drawn as ONE continuous path (connect each column to
+    // the next so the trace flows instead of rendering as separate ticks).
     const cols = Math.round(plotW);
+    let first = true;
     for (let c = 0; c < cols; c++) {
       const a = i0 + Math.floor((c / cols) * nPts);
       const b = i0 + Math.floor(((c + 1) / cols) * nPts);
@@ -268,7 +270,9 @@ function drawTrace(ctx, data, i0, i1, fs, xOf, mid, pxPerUv, plotW, padL, color)
       for (let i = a; i < b && i <= i1; i++) { const v = data[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
       if (mn === Infinity) continue;
       const x = padL + (c / cols) * plotW;
-      ctx.moveTo(x, mid - mx * pxPerUv); ctx.lineTo(x, mid - mn * pxPerUv);
+      const yMax = mid - mx * pxPerUv, yMin = mid - mn * pxPerUv;
+      if (first) { ctx.moveTo(x, yMax); first = false; } else ctx.lineTo(x, yMax);
+      ctx.lineTo(x, yMin);
     }
   }
   ctx.stroke();
